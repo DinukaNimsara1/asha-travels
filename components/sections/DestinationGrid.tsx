@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { siteConfig } from '@/lib/constants';
+import { Destination } from '@/sanity/lib/queries';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -23,8 +24,14 @@ const itemVariants: Variants = {
   },
 };
 
-export default function DestinationGrid() {
-  const featuredDestinations = siteConfig.destinations.slice(0, 6);
+interface DestinationGridProps {
+  destinations?: Destination[];
+}
+
+export default function DestinationGrid({ destinations }: DestinationGridProps) {
+  const featuredDestinations = destinations && destinations.length > 0
+    ? destinations.slice(0, 6)
+    : siteConfig.destinations.slice(0, 6);
 
   return (
     <section className="bg-slate-50 py-20">

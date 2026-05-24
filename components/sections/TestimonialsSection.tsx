@@ -4,12 +4,19 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { siteConfig } from '@/lib/constants';
+import { Testimonial } from '@/sanity/lib/queries';
 
-export default function TestimonialsSection() {
+interface TestimonialsSectionProps {
+  testimonials?: Testimonial[];
+}
+
+export default function TestimonialsSection({ testimonials: cmsTestimonials }: TestimonialsSectionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const testimonials = siteConfig.testimonials;
+  const testimonials = cmsTestimonials && cmsTestimonials.length > 0
+    ? cmsTestimonials
+    : siteConfig.testimonials;
 
   useEffect(() => {
     if (isPaused) return;

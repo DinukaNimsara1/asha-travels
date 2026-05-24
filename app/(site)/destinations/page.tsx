@@ -1,13 +1,18 @@
 import { Metadata } from 'next';
 import PageHero from '@/components/shared/PageHero';
 import DestinationsContent from '@/components/sections/DestinationsContent';
+import { getDestinations } from '@/sanity/lib/queries';
 
 export const metadata: Metadata = {
   title: 'Explore Destinations',
   description: 'Discover our curated travel destinations across the globe.',
 };
 
-export default function DestinationsPage() {
+export const revalidate = 60;
+
+export default async function DestinationsPage() {
+  const destinations = await getDestinations();
+
   return (
     <>
       <PageHero
@@ -17,7 +22,7 @@ export default function DestinationsPage() {
       />
       <div className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4">
-          <DestinationsContent />
+          <DestinationsContent destinations={destinations} />
         </div>
       </div>
     </>

@@ -5,13 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { siteConfig } from '@/lib/constants';
 import DestinationCard from '@/components/shared/DestinationCard';
 import { cn } from '@/lib/utils';
+import { Destination } from '@/sanity/lib/queries';
 
 const regions = ['All', 'Asia', 'Middle East', 'Europe', 'Maldives'];
 
-export default function DestinationsContent() {
+interface DestinationsContentProps {
+  destinations?: Destination[];
+}
+
+export default function DestinationsContent({ destinations }: DestinationsContentProps) {
   const [selectedRegion, setSelectedRegion] = useState('All');
 
-  const filteredDestinations = siteConfig.destinations.filter(
+  const list = destinations && destinations.length > 0 ? destinations : siteConfig.destinations;
+
+  const filteredDestinations = list.filter(
     (dest) => selectedRegion === 'All' || dest.region === selectedRegion
   );
 

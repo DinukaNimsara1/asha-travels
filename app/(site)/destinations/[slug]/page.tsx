@@ -5,6 +5,7 @@ import PageHero from '@/components/shared/PageHero';
 import DestinationCard from '@/components/shared/DestinationCard';
 import { CheckCircle, Calendar, MapPin, FileCheck } from 'lucide-react';
 import Link from 'next/link';
+import { getDestinationBySlug, getDestinations } from '@/sanity/lib/queries';
 
 interface Props {
   params: {
@@ -12,22 +13,79 @@ interface Props {
   };
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const dest = siteConfig.destinations.find((d) => d.slug === params.slug);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const dest = await getDestinationBySlug(params.slug) || siteConfig.destinations.find((d) => d.slug === params.slug);
   if (!dest) return { title: 'Destination Not Found' };
   return { title: `${dest.title} Packages | Asha Travels` };
 }
 
-export default function DestinationDetail({ params }: Props) {
-  const dest = siteConfig.destinations.find((d) => d.slug === params.slug);
+export const revalidate = 60;
 
+export default async function DestinationDetail({ params }: Props) {
+  // Try fetching from Sanity CMS, fallback to static config
+  let dest = await getDestinationBySlug(params.slug);
+  
+  let fallback = false;
   if (!dest) {
-    notFound();
+    const staticDest = siteConfig.destinations.find((d) => d.slug === params.slug);
+    if (!staticDest) {
+      notFound();
+    }
+    dest = {
+      _id: 'static-' + staticDest.slug,
+      title: staticDest.title,
+      slug: staticDest.slug,
+      region: staticDest.region,
+      price: staticDest.price,
+      includesVisa: staticDest.includesVisa,
+      image: staticDest.image,
+      description: `Experience the magic of ${staticDest.title} with our expertly curated travel packages. From iconic landmarks to hidden gems, we ensure your journey is seamless and unforgettable.`,
+      highlights: [
+        'Return flights from Colombo',
+        'Hotel accommodation (3-5 star options)',
+        'Return airport transfers',
+        'Half-day city tour',
+        staticDest.includesVisa ? 'Visa processing assistance' : null,
+        'Comprehensive travel insurance',
+      ].filter(Boolean) as string[],
+    };
+    fallback = true;
   }
 
-  const relatedDestinations = siteConfig.destinations
-    .filter((d) => d.slug !== dest.slug)
-    .slice(0, 3);
+  // Get related destinations (CMS if available, else static fallback)
+  let relatedDestinations: any[] = [];
+  if (!fallback) {
+    const cmsDestinations = await getDestinations();
+    relatedDestinations = cmsDestinations
+      .filter((d) => d.slug !== dest!.slug)
+      .slice(0, 3);
+  }
+  
+  if (relatedDestinations.length === 0) {
+    relatedDestinations = siteConfig.destinations
+      .filter((d) => d.slug !== dest!.slug)
+      .slice(0, 3)
+      .map(d => ({
+        _id: 'static-' + d.slug,
+        title: d.title,
+        slug: d.slug,
+        region: d.region,
+        price: d.price,
+        includesVisa: d.includesVisa,
+        image: d.image
+      }));
+  }
+
+  const highlights = dest.highlights && dest.highlights.length > 0 
+    ? dest.highlights 
+    : [
+        'Return flights from Colombo',
+        'Hotel accommodation (3-5 star options)',
+        'Return airport transfers',
+        'Half-day city tour',
+        dest.includesVisa ? 'Visa processing assistance' : null,
+        'Comprehensive travel insurance',
+      ].filter(Boolean) as string[];
 
   return (
     <>
@@ -49,13 +107,8 @@ export default function DestinationDetail({ params }: Props) {
             <h2 className="font-serif text-3xl font-bold text-slate-900 mb-6">
               About {dest.title}
             </h2>
-            <div className="prose prose-slate max-w-none text-slate-600 space-y-4">
-              <p>
-                Experience the magic of {dest.title} with our expertly curated travel packages. From iconic landmarks to hidden gems, we ensure your journey is seamless and unforgettable.
-              </p>
-              <p>
-                {dest.title} offers a perfect blend of culture, modern attractions, and breathtaking scenery. Whether you are traveling for leisure, business, or a romantic getaway, this destination promises an experience of a lifetime.
-              </p>
+            <div className="prose prose-slate max-w-none text-slate-600 space-y-4 whitespace-pre-line">
+              {dest.description || `Experience the magic of ${dest.title} with our expertly curated travel packages. From iconic landmarks to hidden gems, we ensure your journey is seamless and unforgettable.`}
             </div>
 
             <h3 className="font-serif text-2xl font-bold text-slate-900 mt-12 mb-6">
@@ -63,14 +116,7 @@ export default function DestinationDetail({ params }: Props) {
             </h3>
             <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
               <ul className="space-y-3">
-                {[
-                  'Return flights from Colombo',
-                  'Hotel accommodation (3-5 star options)',
-                  'Return airport transfers',
-                  'Half-day city tour',
-                  dest.includesVisa ? 'Visa processing assistance' : null,
-                  'Comprehensive travel insurance',
-                ].filter(Boolean).map((item, idx) => (
+                {highlights.map((item, idx) => (
                   <li key={idx} className="flex gap-3 items-start">
                     <CheckCircle className="w-5 h-5 text-teal-500 shrink-0 mt-0.5" />
                     <span className="text-slate-700">{item}</span>
