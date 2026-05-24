@@ -8,13 +8,14 @@ import Link from 'next/link';
 import { getDestinationBySlug, getDestinations } from '@/sanity/lib/queries';
 
 interface Props {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const dest = await getDestinationBySlug(params.slug) || siteConfig.destinations.find((d) => d.slug === params.slug);
+  const { slug } = await params;
+  const dest = await getDestinationBySlug(slug) || siteConfig.destinations.find((d) => d.slug === slug);
   if (!dest) return { title: 'Destination Not Found' };
   return { title: `${dest.title} Packages | Asha Travels` };
 }
@@ -22,12 +23,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const revalidate = 60;
 
 export default async function DestinationDetail({ params }: Props) {
+  const { slug } = await params;
   // Try fetching from Sanity CMS, fallback to static config
-  let dest = await getDestinationBySlug(params.slug);
+  let dest = await getDestinationBySlug(slug);
   
   let fallback = false;
   if (!dest) {
-    const staticDest = siteConfig.destinations.find((d) => d.slug === params.slug);
+    const staticDest = siteConfig.destinations.find((d) => d.slug === slug);
     if (!staticDest) {
       notFound();
     }
